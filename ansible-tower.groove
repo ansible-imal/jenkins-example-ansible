@@ -6,9 +6,13 @@ pipeline {
   stages {
     stage('Execute') {
       steps {
-        def response = httpRequest 'http://localhost:8080/jenkins/api/json?pretty=true'
-        println("Status: "+response.status)
-        println("Content: "+response.content)        
+         tower_job = ansibleTower(
+                async: true,
+                jobTemplate: 'get-pods',
+                templateType: 'job',
+                towerServer: 'ansible_openshift'
+        )
+        println("Tower job "+ tower_job.get("JOB_ID") +" was submitted. Job URL is: "+ tower_job.get("JOB_URL"))        
       }
     }
   }
