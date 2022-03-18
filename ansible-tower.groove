@@ -6,13 +6,15 @@ pipeline {
   stages {
     stage('Execute') {
       steps {
-         Execute tower_job = ansibleTower(
+         script {
+             tower_job = ansibleTower(
                 async: true,
                 jobTemplate: 'get-pods',
                 templateType: 'job',
                 towerServer: 'ansible_openshift'
-        )
-        println("Tower job "+ tower_job.get("JOB_ID") +" was submitted. Job URL is: "+ tower_job.get("JOB_URL"))        
+             )
+             println("Tower job "+ tower_job.get("JOB_ID") +" was submitted. Job URL is: "+ tower_job.get("JOB_URL"))        
+         } 
       }
     }
   }
