@@ -6,7 +6,7 @@ pipeline {
   stages {
     stage('Execute') {
       steps {
-         tower_job = ansibleTower(
+         Execute tower_job = ansibleTower(
                 async: true,
                 jobTemplate: 'get-pods',
                 templateType: 'job',
