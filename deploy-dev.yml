@@ -72,7 +72,7 @@
                 sourceStrategy:
                   from:
                     kind: ImageStreamTag
-                    namespace: "${NAMESPACE}"
+                    namespace: "pipeline-tutorial"
                     name: php:${PHP_VERSION}
                   env:
                   - name: COMPOSER_MIRROR
