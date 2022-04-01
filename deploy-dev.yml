@@ -3,12 +3,37 @@
   collections:
     - community.kubernetes
   tasks:
+    - name: Ensure the myapp Namespace exists.
+      k8s:
+        api_version: v1
+        kind: Namespace
+        name: myapp
+        state: present
+
+    - name: Ensure the myapp Service exists in the myapp Namespace.
+      k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: myapp
+            namespace: myapp
+          spec:
+            type: LoadBalancer
+            ports:
+            - port: 8080
+              targetPort: 8080
+            selector:
+              app: myapp
+              
     - name: Create Image ImageStream 
       k8s: 
         state: present 
         resource_definition: |
           kind: ImageStream
           apiVersion: v1
+          namespace: openshift
           metadata:
             name: "laravel_devel"
             annotations:
@@ -20,6 +45,7 @@
         resource_definition: |
           kind: BuildConfig
           apiVersion: v1
+          namespace: openshift
           metadata:
             name: "laravel_devel"
             annotations:
