@@ -26,13 +26,13 @@
               targetPort: 8080
             selector:
               app: myapp
-              
+
     - name: Create Image ImageStream 
       k8s: 
         state: present 
         resource_definition: |
           kind: ImageStream
-          apiVersion: v1
+          apiVersion: apps/v1
           namespace: openshift
           metadata:
             name: "laravel_devel"
@@ -44,7 +44,7 @@
         state: present 
         resource_definition: |
           kind: BuildConfig
-          apiVersion: v1
+          apiVersion: apps/v1
           namespace: openshift
           metadata:
             name: "laravel_devel"
