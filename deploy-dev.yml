@@ -9,6 +9,7 @@
         resource_definition: |
           kind: Template
           apiVersion: template.openshift.io/v1
+          namespace: openshift
           metadata:
             name: php-laravel
             annotations:
