@@ -3,245 +3,56 @@
   collections:
     - community.kubernetes
   tasks:
-    - name: Create a new development Deployment
-      k8s:
-        state: present
+    - name: Create Image ImageStream 
+      k8s: 
+        state: present 
         resource_definition: |
-          kind: Template
-          apiVersion: apps.openshift.io/v1
-          namespace: openshift
+          kind: ImageStream
+          apiVersion: v1
           metadata:
-            name: php-laravel
+            name: "laravel_devel"
             annotations:
-              description: |-
-                An example Laravel (PHP) application with a SQLite database. For more information about using this template, including OpenShift considerations, see https://github.com/luciddreamz/laravel-ex/blob/master/readme.md.
-                WARNING: Any data stored will be lost upon pod destruction. Only use this template for testing.
-              iconClass: icon-laravel
-              openshift.io/display-name: Laravel (PHP)
-              tags: quickstart,php,laravel
-          message: |-
-            The following service(s) have been created in your project: laravel_devel.
-            For more information about using this template, including OpenShift considerations, see https://github.com/luciddreamz/laravel-ex/blob/master/readme.md.
-          labels:
-            template: "laravel_devel"
-            app: "laravel_devel"
-          objects:
-          - kind: Service
-            apiVersion: v1
-            metadata:
-              name: "laravel_devel"
-              annotations:
-                description: Exposes and load balances the application pods
-            spec:
-              ports:
-              - name: web
-                port: 8080
-                targetPort: 8080
-              selector:
-                name: "laravel_devel"
-          - kind: Route
-            apiVersion: v1
-            metadata:
-              name: "laravel_devel"
-            spec:
-              host: "${APPLICATION_DOMAIN}"
-              to:
-                kind: Service
-                name: "laravel_devel"
-          - kind: ImageStream
-            apiVersion: v1
-            metadata:
-              name: "laravel_devel"
-              annotations:
-                description: Keeps track of changes in the application image
-          - kind: BuildConfig
-            apiVersion: v1
-            metadata:
-              name: "laravel_devel"
-              annotations:
-                description: Defines how to build the application
-                template.alpha.openshift.io/wait-for-ready: 'true'
-            spec:
-              source:
-                contextDir: "${CONTEXT_DIR}"
-                type: Git
-                git:
-                  uri: "${SOURCE_REPOSITORY_URL}"
-                  ref: "${SOURCE_REPOSITORY_REF}"
-              strategy:
-                type: Source
-                sourceStrategy:
-                  from:
-                    kind: ImageStreamTag
-                    namespace: "pipeline-tutorial"
-                    name: php:${PHP_VERSION}
-                  env:
-                  - name: COMPOSER_MIRROR
-                    value: "${COMPOSER_MIRROR}"
-              output:
-                to:
-                  kind: ImageStreamTag
-                  name: "laravel_devel:latest"
-              triggers:
-              - type: ImageChange
-              - type: ConfigChange
-              - github:
-                  secret: "${GITHUB_WEBHOOK_SECRET}"
-                type: GitHub
-          - kind: DeploymentConfig
-            apiVersion: v1
-            metadata:
-              name: "laravel_devel"
-              annotations:
-                description: Defines how to deploy the application server
-                template.alpha.openshift.io/wait-for-ready: 'true'
-            spec:
-              strategy:
-                type: Rolling
-                rollingParams:
-                  updatePeriodSeconds: 1
-                  intervalSeconds: 1
-                  timeoutSeconds: 120
-                  maxSurge: 20%
-                  maxUnavailable: 50%
-                  pre:
-                    execNewPod:
-                      command:
-                      - "./migrate-database.sh"
-                      containerName: "laravel_devel"
-                    failurePolicy: Retry
-              triggers:
-              - imageChangeParams:
-                  automatic: true
-                  containerNames:
-                  - "laravel_devel"
-                  from:
-                    kind: ImageStreamTag
-                    name: "laravel_devel:latest"
-                type: ImageChange
-              - type: ConfigChange
-              replicas: 1
-              selector:
-                name: "laravel_devel"
-              template:
-                metadata:
-                  name: "laravel_devel"
-                  labels:
-                    name: "laravel_devel"
-                spec:
-                  containers:
-                  - name: "laravel_devel"
-                    image: " "
-                    ports:
-                    - containerPort: 8080
-                    readinessProbe:
-                      httpGet:
-                        path: "/health.php"
-                        port: 8080
-                      initialDelaySeconds: 3
-                      timeoutSeconds: 3
-                    livenessProbe:
-                      httpGet:
-                        path: "/"
-                        port: 8080
-                      initialDelaySeconds: 30
-                      timeoutSeconds: 3
-                    env:
-                    - name: ROUTER_SHARD
-                      value: "${ROUTER_SHARD}"
-                    - name: DB_CONNECTION
-                      value: "${DATABASE_ENGINE}"
-                    - name: APP_KEY
-                      value: "${LARAVEL_APP_KEY}"
-                    - name: APP_ENV
-                      value: "${LARAVEL_APP_ENV}"
-                    - name: APP_DEBUG
-                      value: "${LARAVEL_APP_DEBUG}"
-                    - name: OPCACHE_REVALIDATE_FREQ
-                      value: "${OPCACHE_REVALIDATE_FREQ}"
-                    resources:
-                      limits:
-                        memory: "${MEMORY_LIMIT}"
-          parameters:
-          - name: NAME
-            displayName: Name
-            description: The name assigned to all of the frontend objects defined in this template.
-            value: laravel-demo
-            required: true
-          - name: NAMESPACE
-            displayName: Namespace
-            description: The OpenShift Namespace where the ImageStream resides.
-            value: openshift
-            required: true
-          - name: PHP_VERSION
-            displayName: PHP Version
-            description: Version of PHP image to be used (7.3-ubi7, 7.4-ubi8, or latest).
-            required: true
-            value: 7.4-ubi8
-          - name: SOURCE_REPOSITORY_URL
-            displayName: Git Repository URL
-            description: The URL of the repository with your application source code.
-            value: https://github.com/lutfi-ingram/laravelJenkins.git
-            required: true
-          - name: SOURCE_REPOSITORY_REF
-            displayName: Git Reference
-            description: Set this to a branch name, tag or other ref of your repository if you
-              are not using the default branch.
-            value: development
-          - name: LARAVEL_APP_ENV
-            displayName: Laravel Application Environment
-            description: Determines the 'environment' your application is currently.
-            value: development
-            required: true
-          - name: LARAVEL_APP_DEBUG
-            displayName: Laravel Application Debug Mode
-            description: Enable or disable detailed error messages.
-            value: 'true'
-            required: true
-          - name: OPCACHE_REVALIDATE_FREQ
-            displayName: OPcache Revalidation Frequency
-            description: How often to check script timestamps for updates, in seconds. 0 will
-              result in OPcache checking for updates on every request.
-            value: '0'
-          - name: COMPOSER_MIRROR
-            displayName: Custom Composer Mirror URL
-            description: The custom Composer mirror URL
-          - name: ROUTER_SHARD
-            displayName: Router Shard
-            description: The router shard used by routes in your current OpenShift cluster (http://PROJECT_NAME-APPLICATION_NAME.ROUTER_SHARD.CLUSTER_NAME.openshiftapps.com/).
-            value: 44fs
-            required: true
-          - name: MEMORY_LIMIT
-            displayName: Memory Limit
-            description: Maximum amount of memory the Laravel container can use.
-            value: 512Mi
-            required: true
-          - name: CONTEXT_DIR
-            displayName: Context Directory
-            description: Set this to the relative path to your project if it is not in the root
-              of your repository.
-          - name: APPLICATION_DOMAIN
-            displayName: Application Hostname
-            description: The exposed hostname that will route to the Laravel service, if left
-              blank a value will be defaulted.
-          - name: GITHUB_WEBHOOK_SECRET
-            displayName: GitHub Webhook Secret
-            description: A secret string used to configure the GitHub webhook.
-            generate: expression
-            from: "[a-zA-Z0-9]{40}"
-          - name: DATABASE_ENGINE
-            displayName: Database Engine
-            description: 'Database engine: mysql, pgsql, or sqlite (default).'
-            value: sqlite
-            required: true
-          - name: LARAVEL_APP_KEY
-            displayName: Laravel Encryption Key
-            description: Set this to a 32 character random string.
-            generate: expression
-            from: "[\\w]{32}"
+              description: Keeps track of changes in the application image
 
-        wait: yes
-      register: laravel_deployment
+    - name: Create Build Config
+      k8s: 
+        state: present 
+        resource_definition: |
+          kind: BuildConfig
+          apiVersion: v1
+          metadata:
+            name: "laravel_devel"
+            annotations:
+              description: Defines how to build the application
+              template.alpha.openshift.io/wait-for-ready: 'true'
+          spec:
+            source:
+              contextDir: /var/www/html
+              type: Git
+              git:
+                uri: https://github.com/lutfi-ingram/laravelJenkins.git
+                ref: development
+            strategy:
+              type: Source
+              sourceStrategy:
+                from:
+                  kind: ImageStreamTag
+                  namespace: "pipeline-tutorial"
+                  name: php:7.4-ubi8
+                env:
+                - name: COMPOSER_MIRROR
+                  value: "somewhere"
+            output:
+              to:
+                kind: ImageStreamTag
+                name: "laravel_devel:latest"
+            triggers:
+            - type: ImageChange
+            - type: ConfigChange
+            - github:
+                secret: lijuow8uh883hjhkgu8jklamcjduwiplkhtjnuki
+              type: GitHub
+
     - name: Get the Deployment
       k8s_info:
         kind: Deployment
