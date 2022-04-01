@@ -8,7 +8,7 @@
         state: present
         resource_definition: |
           kind: Template
-          apiVersion: v1
+          apiVersion: apps.openshift.io/v1
           namespace: openshift
           metadata:
             name: php-laravel
