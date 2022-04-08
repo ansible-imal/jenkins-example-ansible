@@ -22,9 +22,10 @@
     - name: Create a new Service
       k8s:
         state: present
+        namespace: testing-namespace
         resource_definition: |
           kind: ImageStream
-          namespace: jenkins-operatorhub 
+          namespace: testing-namespace
           apiVersion: v1
           metadata:
             name: "{{ app_name }}"
