@@ -12,6 +12,17 @@
     - name: Generate random string with length 32
       debug:
         var: lookup('community.general.random_string', length=32)
+    - name: Create a new Service
+      k8s:
+        state: present
+        resource_definition: 
+          kind: ImageStream
+          apiVersion: v1
+          metadata:
+            name: "{{ app_name }}"
+            annotations:
+              description: Keeps track of changes in the application image
+
     - name: Create a new deployment
       k8s:
         state: present
