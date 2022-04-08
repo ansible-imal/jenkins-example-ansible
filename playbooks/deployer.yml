@@ -180,7 +180,7 @@
                   - name: DB_CONNECTION
                     value: "sqlite"
                   - name: APP_KEY
-                    value: "{{ lookup('password', '/tmp/passwordfile length=32 chars=digits') }}"
+                    value: "{{ lookup('password', '/dev/null chars=ascii_letters,digits,punctuation length=32') }}"
                   - name: APP_ENV
                     value: "{{ deployment_environment }}"
                   - name: APP_DEBUG
@@ -194,34 +194,7 @@
         wait: yes
       register: vote_ui_dev_deployment
     
-    - name: Create a new Deployment
-      k8s:
-        state: present
-        namespace: "{{ app_name }}"
-        resource_definition: |
-          apiVersion: apps/v1
-          kind: Deployment
-          metadata:
-            name: helloyou
-            namespace: "{{ app_name }}"
-          spec:
-            selector:
-              matchLabels:
-                app: "{{ app_name }}"
-            template:
-              metadata:
-                labels:
-                  app: "{{ app_name }}"
-              spec:
-                containers:
-                - name: {{app_name}}
-                  image: "{{app_name}}:latest"
-                  resources:
-                    limits:
-                      memory: "150Mi"
-                      cpu: "500m"
-                  ports:
-                  - containerPort: 8080
+ 
     # - name: Create a k8s namespace
     #   community.okd.k8s:
     #     name: testing-okd
