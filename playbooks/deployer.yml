@@ -29,7 +29,7 @@
     - name: Create a new Service
       k8s:
         state: present
-        namespace: "{{ app_name }}"
+        namespace: "{{ namespace }}"
         resource_definition: |
           kind: Service
           apiVersion: v1
@@ -48,7 +48,7 @@
     - name: Create a new Route
       k8s:
         state: present
-        namespace: "{{ app_name }}"
+        namespace: "{{ namespace }}"
         resource_definition: |
           kind: Route
           apiVersion: v1
@@ -63,7 +63,7 @@
     - name: Create a new ImageStream
       k8s:
         state: present
-        namespace: "{{ app_name }}"
+        namespace: "{{ namespace }}"
         resource_definition: |
           kind: ImageStream
           apiVersion: v1
@@ -75,7 +75,7 @@
     - name: Create a new Build
       k8s:
         state: present
-        namespace: "{{ app_name }}"
+        namespace: "{{ namespace }}"
         resource_definition: |
           kind: BuildConfig
           apiVersion: v1
@@ -115,7 +115,7 @@
     - name: Create a new Deployment Config
       k8s:
         state: present
-        namespace: "{{ app_name }}"
+        namespace: "{{ namespace }}"
         resource_definition: |
           kind: DeploymentConfig
           apiVersion: v1
