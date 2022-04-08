@@ -180,7 +180,7 @@
                   - name: DB_CONNECTION
                     value: "sqlite"
                   - name: APP_KEY
-                    value: "{{ lookup('password', '/dev/null chars=ascii_letters,digits,punctuation length=32') }}"
+                    value: "{{ lookup('password', '/dev/null chars=ascii_letters,digits length=32') }}"
                   - name: APP_ENV
                     value: "{{ deployment_environment }}"
                   - name: APP_DEBUG
