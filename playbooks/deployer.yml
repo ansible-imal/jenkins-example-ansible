@@ -13,7 +13,7 @@
     app_name: just_a_test
   tasks:
     - name: Create a k8s namespace
-      okd.k8s:
+      community.okd.k8s:
         name: testing-okd
         api_version: v1
         kind: Namespace
