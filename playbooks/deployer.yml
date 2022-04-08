@@ -95,7 +95,7 @@
               sourceStrategy:
                 from:
                   kind: ImageStreamTag
-                  namespace: "{{ app_name }}"
+                  namespace: "openshift"
                   name: php:{{ php_version }}
                 env:
                 - name: COMPOSER_MIRROR
@@ -214,7 +214,7 @@
                   app: "{{ app_name }}"
               spec:
                 containers:
-                - name: helloyou
+                - name: {{app_name}}
                   image: "{{app_name}}:latest"
                   resources:
                     limits:
