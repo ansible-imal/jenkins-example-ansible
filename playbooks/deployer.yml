@@ -5,6 +5,8 @@
   collections:
     - community.kubernetes
     - community.okd
+    - community.okd.k8s
+
   vars:
     deployment_environment: "development"
     app_debug: true
