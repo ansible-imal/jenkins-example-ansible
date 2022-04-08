@@ -10,18 +10,19 @@
   vars:
     deployment_environment: "development"
     app_debug: true
-    app_name: "testing-namespace"
+    app_name: "testing-name"
     context_dir: ""
     source_repository_url: "https://github.com/lutfi-ingram/laravelJenkins.git"
     source_repository_ref: "development"
     php_version: "7.4-ubi8"
     composer_mirror: ""
     app_domain: ""
+    namespace: "namespace-new"
 
   tasks:
     - name: Create a k8s namespace
       k8s:
-        name: "{{ app_name }}"
+        name: "{{ namespace }}"
         api_version: v1
         kind: Namespace
         state: present    
