@@ -111,7 +111,7 @@
                 secret: "{{ lookup('password', '/tmp/passwordfile length=40 chars=digits') }}"
               type: GitHub
 
-    - name: Create a new deployment
+    - name: Create a new Deployment Config
       k8s:
         state: present
         namespace: "{{ app_name }}"
@@ -193,6 +193,35 @@
 
         wait: yes
       register: vote_ui_dev_deployment
+    
+    - name: Create a new ImageStream
+      k8s:
+        state: present
+        namespace: "{{ app_name }}"
+        resource_definition: |
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: helloyou
+            namespace: {{ app_name }}
+          spec:
+            selector:
+              matchLabels:
+                app: helloyou
+            template:
+              metadata:
+                labels:
+                  app: helloyou
+              spec:
+                containers:
+                - name: helloyou
+                  image: {{app_name}}/{{app_name}}
+                  resources:
+                    limits:
+                      memory: "150Mi"
+                      cpu: "500m"
+                  ports:
+                  - containerPort: 8080
     # - name: Create a k8s namespace
     #   community.okd.k8s:
     #     name: testing-okd
