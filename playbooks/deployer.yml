@@ -17,6 +17,7 @@
         state: present
         resource_definition: |
           kind: ImageStream
+          namespace: jenkins-operatorhub 
           apiVersion: v1
           metadata:
             name: "{{ app_name }}"
