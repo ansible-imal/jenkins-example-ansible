@@ -10,7 +10,14 @@
   vars:
     deployment_environment: "development"
     app_debug: true
-    app_name: testing-namespace
+    app_name: "testing-namespace"
+    context_dir: ""
+    source_repository_url: "https://github.com/lutfi-ingram/laravelJenkins.git"
+    source_repository_ref: "development"
+    php_version: "7.4-ubi8"
+    composer_mirror: ""
+    app_domain: ""
+
   tasks:
     - name: Create a k8s namespace
       k8s:
@@ -18,8 +25,41 @@
         api_version: v1
         kind: Namespace
         state: present    
-
     - name: Create a new Service
+      k8s:
+        state: present
+        namespace: "{{ app_name }}"
+        resource_definition: |
+          kind: Service
+          apiVersion: v1
+          metadata:
+            name: "{{ app_name }}"
+            annotations:
+              description: Exposes and load balances the application pods
+          spec:
+            ports:
+            - name: web
+              port: 8080
+              targetPort: 8080
+            selector:
+              name: "{{ app_name }}"
+
+    - name: Create a new Route
+      k8s:
+        state: present
+        namespace: "{{ app_name }}"
+        resource_definition: |
+          kind: Route
+          apiVersion: v1
+          metadata:
+            name: "{{ app_name }}"
+          spec:
+            host: "{{ app_domain }}"
+            to:
+              kind: Service
+              name: "{{ app_name }}"
+
+    - name: Create a new ImageStream
       k8s:
         state: present
         namespace: "{{ app_name }}"
@@ -31,6 +71,46 @@
             name: "{{ app_name }}"
             annotations:
               description: Keeps track of changes in the application image
+
+    - name: Create a new Build
+      k8s:
+        state: present
+        namespace: "{{ app_name }}"
+        resource_definition: |
+          kind: BuildConfig
+          apiVersion: v1
+          metadata:
+            name: "{{ app_name }}"
+            annotations:
+              description: Defines how to build the application
+              template.alpha.openshift.io/wait-for-ready: 'true'
+          spec:
+            source:
+              contextDir: "{{ context_dir }}"
+              type: Git
+              git:
+                uri: "{{ source_repository_url }}"
+                ref: "{{ source_repository_ref }}"
+            strategy:
+              type: Source
+              sourceStrategy:
+                from:
+                  kind: ImageStreamTag
+                  namespace: "{{ app_name }}"
+                  name: php:${php_version}
+                env:
+                - name: COMPOSER_MIRROR
+                  value: "{{ composer_mirror }}"
+            output:
+              to:
+                kind: ImageStreamTag
+                name: "{{ app_name }}:latest"
+            triggers:
+            - type: ImageChange
+            - type: ConfigChange
+            - github:
+                secret: "{{ lookup('password', '/tmp/passwordfile length=40 chars=digits') }}"
+              type: GitHub
 
     - name: Create a new deployment
       k8s:
