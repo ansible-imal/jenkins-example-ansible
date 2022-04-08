@@ -97,7 +97,7 @@
                 from:
                   kind: ImageStreamTag
                   namespace: "{{ app_name }}"
-                  name: php:${php_version}
+                  name: php:{{ php_version }}
                 env:
                 - name: COMPOSER_MIRROR
                   value: "{{ composer_mirror }}"
