@@ -7,6 +7,7 @@
   vars:
     deployment_environment: "development"
     app_debug: true
+    app_name: just_a_test
   tasks:
     - name: Generate random string with length 32
       debug:
@@ -18,7 +19,7 @@
           kind: DeploymentConfig
           apiVersion: v1
           metadata:
-            name: "${NAME}"
+            name: "{{ app_name }}"
             annotations:
               description: Defines how to deploy the application server
               template.alpha.openshift.io/wait-for-ready: 'true'
@@ -35,29 +36,29 @@
                   execNewPod:
                     command:
                     - "./migrate-database.sh"
-                    containerName: "${NAME}"
+                    containerName: "{{ app_name }}"
                   failurePolicy: Retry
             triggers:
             - imageChangeParams:
                 automatic: true
                 containerNames:
-                - "${NAME}"
+                - "{{ app_name }}"
                 from:
                   kind: ImageStreamTag
-                  name: "${NAME}:latest"
+                  name: "{{ app_name }}:latest"
               type: ImageChange
             - type: ConfigChange
             replicas: 1
             selector:
-              name: "${NAME}"
+              name: "{{ app_name }}"
             template:
               metadata:
-                name: "${NAME}"
+                name: "{{ app_name }}"
                 labels:
-                  name: "${NAME}"
+                  name: "{{ app_name }}"
               spec:
                 containers:
-                - name: "${NAME}"
+                - name: "{{ app_name }}"
                   image: " "
                   ports:
                   - containerPort: 8080
