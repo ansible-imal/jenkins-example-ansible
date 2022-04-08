@@ -15,7 +15,7 @@
     - name: Create a new Service
       k8s:
         state: present
-        resource_definition: 
+        resource_definition: |
           kind: ImageStream
           apiVersion: v1
           metadata:
