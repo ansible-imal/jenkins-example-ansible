@@ -4,14 +4,18 @@
   connection: local
   collections:
     - community.kubernetes
+    - community.okd
   vars:
     deployment_environment: "development"
     app_debug: true
     app_name: just_a_test
   tasks:
-    - name: Generate random string with length 32
-      debug:
-        var: lookup('community.general.random_string', length=32)
+    - name: Create a k8s namespace
+      okd.k8s:
+        name: testing-okd
+        api_version: v1
+        kind: Namespace
+        state: present    
     - name: Create a new Service
       k8s:
         state: present
