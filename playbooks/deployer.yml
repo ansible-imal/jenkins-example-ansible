@@ -194,7 +194,7 @@
         wait: yes
       register: vote_ui_dev_deployment
     
-    - name: Create a new ImageStream
+    - name: Create a new Deployment
       k8s:
         state: present
         namespace: "{{ app_name }}"
@@ -203,19 +203,19 @@
           kind: Deployment
           metadata:
             name: helloyou
-            namespace: {{ app_name }}
+            namespace: "{{ app_name }}"
           spec:
             selector:
               matchLabels:
-                app: helloyou
+                app: "{{ app_name }}"
             template:
               metadata:
                 labels:
-                  app: helloyou
+                  app: "{{ app_name }}"
               spec:
                 containers:
                 - name: helloyou
-                  image: {{app_name}}/{{app_name}}
+                  image: "{{app_name}}:latest"
                   resources:
                     limits:
                       memory: "150Mi"
