@@ -3,81 +3,134 @@
   collections:
     - community.kubernetes
   tasks:
-    - name: Ensure the myapp Namespace exists.
-      k8s:
-        api_version: v1
-        kind: Namespace
-        name: myapp
-        state: present
-
-    - name: Ensure the myapp Service exists in the myapp Namespace.
+    - name: Create Deployment
       k8s:
         state: present
-        definition:
-          apiVersion: v1
-          kind: Service
-          metadata:
-            name: myapp
-            namespace: myapp
-          spec:
-            type: LoadBalancer
-            ports:
-            - port: 8080
-              targetPort: 8080
-            selector:
-              app: myapp
-
-    - name: Create Image ImageStream 
-      k8s: 
-        state: present 
         resource_definition: |
-          kind: ImageStream
-          apiVersion: apps/v1
-          namespace: openshift
-          metadata:
-            name: "laravel_devel"
-            annotations:
-              description: Keeps track of changes in the application image
+            "kind": "DeploymentConfig",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "php-laravel",
+                "annotations": {
+                    "description": "Defines how to deploy the application server",
+                    "template.alpha.openshift.io/wait-for-ready": "true"
+                }
+            },
+            "spec": {
+                "strategy": {
+                    "type": "Rolling",
+                    "rollingParams":{
+                        "updatePeriodSeconds": 1, 
+                        "intervalSeconds": 1,
+                        "timeoutSeconds": 120, 
+                        "maxSurge": "20%", 
+                        "maxUnavailable": "50%", 
+                        "pre": {
+                            "execNewPod": {
+                                "command": [
+                                    "./migrate-database.sh"
+                                ],
+                                "containerName": "php-laravel"
+                            },
+                            "failurePolicy": "Retry"
+                        } 
+                    }    
+                },
+                
+                "triggers": [
+                    {
+                        "imageChangeParams": {
+                            "automatic": true,
+                            "containerNames": [
+                                "php-laravel"
+                            ],
+                            "from": {
+                                "kind": "ImageStreamTag",
+                                "name": "php-laravel:latest"
+                            }
+                        },
+                        "type": "ImageChange"
+                    },
+                    {
+                        "type": "ConfigChange"
+                    }
+                ],
+                "replicas": 1,
+                "selector": {
+                    "name": "php-laravel"
+                },
+                "template": {
+                    "metadata": {                        
+                        "name": "php-laravel",
+                        "labels": {
+                            "name": "php-laravel"
+                        }
+                    },
+                    "spec": {
+                        "containers": [
+                            {
+                                "name": "php-laravel",
+                                "image": "",
+                                "ports": [
+                                    {
+                                        "containerPort": 8080
+                                    }
+                                ],
+                                "readinessProbe": {
+                                    "httpGet": {
+                                        "path": "/health.php",
+                                        "port": 8080
+                                    },
+                                    "initialDelaySeconds": 3,
+                                    "timeoutSeconds": 3
+                                },
+                                "livenessProbe": {
+                                    "httpGet": {
+                                        "path": "/",
+                                        "port": 8080
+                                    },
+                                    "initialDelaySeconds": 30,
+                                    "timeoutSeconds": 3
+                                },
+                                "env": [
+                                    {
+                                        "name": "ROUTER_SHARD",
+                                        "value": "44fs"
+                                    },
+                                    {
+                                        "name": "DB_CONNECTION",
+                                        "value": "sqlite"
+                                    },
+                                    {
+                                        "name": "APP_KEY",
+                                        "value": "abcgdftyuj7wooopjkuyehatyehdklxouyto977"
+                                    },
+                                    {
+                                        "name": "APP_ENV",
+                                        "value": "dev"
+                                    },
+                                    {
+                                        "name": "APP_DEBUG",
+                                        "value": 1
+                                    },
+                                    {
+                                        "name": "OPCACHE_REVALIDATE_FREQ",
+                                        "value": 0
+                                    }
+                                ],
+                                "resources": {
+                                    "limits": {
+                                        "memory": 512Mi
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
 
-    - name: Create Build Config
-      k8s: 
-        state: present 
-        resource_definition: |
-          kind: BuildConfig
-          apiVersion: apps/v1
-          namespace: openshift
-          metadata:
-            name: "laravel_devel"
-            annotations:
-              description: Defines how to build the application
-              template.alpha.openshift.io/wait-for-ready: 'true'
-          spec:
-            source:
-              contextDir: /var/www/html
-              type: Git
-              git:
-                uri: https://github.com/lutfi-ingram/laravelJenkins.git
-                ref: development
-            strategy:
-              type: Source
-              sourceStrategy:
-                from:
-                  kind: ImageStreamTag
-                  namespace: "pipeline-tutorial"
-                  name: php:7.4-ubi8
-                env:
-                - name: COMPOSER_MIRROR
-                  value: "somewhere"
-            output:
-              to:
-                kind: ImageStreamTag
-                name: "laravel_devel:latest"
-            triggers:
-            - type: ImageChange
-            - type: ConfigChange
-            - github:
-                secret: lijuow8uh883hjhkgu8jklamcjduwiplkhtjnuki
-              type: GitHub
+            }
+        
+      register: deployment 
 
     - name: Get the Deployment
       k8s_info:

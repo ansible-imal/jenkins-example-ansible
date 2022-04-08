@@ -1,0 +1,107 @@
+---
+- name: Deployment Config 
+  hosts: localhost
+  connection: local
+  collections:
+    - community.kubernetes
+  vars:
+    deployment_environment: "development"
+    app_debug: true
+  tasks:
+    - name: Generate random string with length 32
+      debug:
+        var: lookup('community.general.random_string', length=32)
+    - name: Create a new deployment
+      k8s:
+        state: present
+        resource_definition: 
+          kind: DeploymentConfig
+          apiVersion: v1
+          metadata:
+            name: "${NAME}"
+            annotations:
+              description: Defines how to deploy the application server
+              template.alpha.openshift.io/wait-for-ready: 'true'
+          spec:
+            strategy:
+              type: Rolling
+              rollingParams:
+                updatePeriodSeconds: 1
+                intervalSeconds: 1
+                timeoutSeconds: 120
+                maxSurge: 20%
+                maxUnavailable: 50%
+                pre:
+                  execNewPod:
+                    command:
+                    - "./migrate-database.sh"
+                    containerName: "${NAME}"
+                  failurePolicy: Retry
+            triggers:
+            - imageChangeParams:
+                automatic: true
+                containerNames:
+                - "${NAME}"
+                from:
+                  kind: ImageStreamTag
+                  name: "${NAME}:latest"
+              type: ImageChange
+            - type: ConfigChange
+            replicas: 1
+            selector:
+              name: "${NAME}"
+            template:
+              metadata:
+                name: "${NAME}"
+                labels:
+                  name: "${NAME}"
+              spec:
+                containers:
+                - name: "${NAME}"
+                  image: " "
+                  ports:
+                  - containerPort: 8080
+                  readinessProbe:
+                    httpGet:
+                      path: "/health.php"
+                      port: 8080
+                    initialDelaySeconds: 3
+                    timeoutSeconds: 3
+                  livenessProbe:
+                    httpGet:
+                      path: "/"
+                      port: 8080
+                    initialDelaySeconds: 30
+                    timeoutSeconds: 3
+                  env:
+                  - name: ROUTER_SHARD
+                    value: "44fs"
+                  - name: DB_CONNECTION
+                    value: "sqlite"
+                  - name: APP_KEY
+                    value: "{{ lookup('password', '/tmp/passwordfile length=32 chars=digits') }}"
+                  - name: APP_ENV
+                    value: "{{ deployment_environment }}"
+                  - name: APP_DEBUG
+                    value: "{{ app_debug }}"
+                  - name: OPCACHE_REVALIDATE_FREQ
+                    value: "0"
+                  resources:
+                    limits:
+                      memory: "512Mi"
+
+        wait: yes
+      register: vote_ui_dev_deployment
+    - name: Get the Deployment
+      k8s_info:
+        kind: DeploymentConfig
+        namespace: pipeline-tutorial
+      register: funstuff_deployments_list
+    - name: Log Deployment Details
+      debug:
+        msg: "{{ item | json_query('metadata.name') }}"
+      loop: "{{funstuff_deployments_list.resources}}"
+      loop_control:
+        label: "Deployment (Namespace: {{item | json_query('metadata.namespace')}},Replicas:{{ item | json_query('spec.replicas')}})"
+
+
