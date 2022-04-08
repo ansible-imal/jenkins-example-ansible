@@ -65,7 +65,6 @@
         namespace: "{{ app_name }}"
         resource_definition: |
           kind: ImageStream
-          namespace: "{{ app_name }}"
           apiVersion: v1
           metadata:
             name: "{{ app_name }}"
