@@ -36,7 +36,7 @@
       k8s:
         state: present
         namespace: testing-namespace
-        resource_definition: 
+        resource_definition: |
           kind: DeploymentConfig
           apiVersion: v1
           metadata:
