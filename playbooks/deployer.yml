@@ -26,6 +26,7 @@
         api_version: v1
         kind: Namespace
         state: present    
+  
     - name: Create a new Service
       k8s:
         state: present
@@ -59,58 +60,6 @@
             to:
               kind: Service
               name: "{{ app_name }}"
-
-    - name: Create a new ImageStream
-      k8s:
-        state: present
-        namespace: "{{ namespace }}"
-        resource_definition: |
-          kind: ImageStream
-          apiVersion: v1
-          metadata:
-            name: "{{ app_name }}"
-            annotations:
-              description: Keeps track of changes in the application image
-
-    - name: Create a new Build
-      k8s:
-        state: present
-        namespace: "{{ namespace }}"
-        resource_definition: |
-          kind: BuildConfig
-          apiVersion: v1
-          metadata:
-            name: "{{ app_name }}"
-            annotations:
-              description: Defines how to build the application
-              template.alpha.openshift.io/wait-for-ready: 'true'
-          spec:
-            source:
-              contextDir: "{{ context_dir }}"
-              type: Git
-              git:
-                uri: "{{ source_repository_url }}"
-                ref: "{{ source_repository_ref }}"
-            strategy:
-              type: Source
-              sourceStrategy:
-                from:
-                  kind: ImageStreamTag
-                  namespace: "openshift"
-                  name: php:{{ php_version }}
-                env:
-                - name: COMPOSER_MIRROR
-                  value: "{{ composer_mirror }}"
-            output:
-              to:
-                kind: ImageStreamTag
-                name: "{{ app_name }}:latest"
-            triggers:
-            - type: ImageChange
-            - type: ConfigChange
-            - github:
-                secret: "{{ lookup('password', '/tmp/passwordfile length=40 chars=digits') }}"
-              type: GitHub
 
     - name: Create a new Deployment Config
       k8s:
