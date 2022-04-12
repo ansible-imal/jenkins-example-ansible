@@ -1,0 +1,105 @@
+---
+- name: Deployment Config 
+  hosts: localhost
+  connection: local
+  collections:
+    - community.kubernetes
+
+  vars:
+    namespace: "jenkins-operatorhub"
+    app_name: "php-test"
+    deployment_environment: "development"
+    app_debug: true
+    composer_mirror: ""
+    app_domain: ""
+    
+  tasks:
+    - name: Create a namespace if not exists
+      k8s:
+        name: "{{ namespace }}"
+        api_version: v1
+        kind: Namespace
+        state: present    
+    
+    - name: Create a new Deployment Config
+      k8s:
+        state: present
+        namespace: "{{ namespace }}"
+        resource_definition: |
+          kind: DeploymentConfig
+          apiVersion: v1
+          metadata:
+            name: "{{ app_name }}"
+            annotations:
+              description: Defines how to deploy the application server
+              template.alpha.openshift.io/wait-for-ready: 'true'
+          spec:
+            strategy:
+              type: Rolling
+              rollingParams:
+                updatePeriodSeconds: 1
+                intervalSeconds: 1
+                timeoutSeconds: 120
+                maxSurge: 20%
+                maxUnavailable: 50%
+                pre:
+                  execNewPod:
+                    command:
+                    - "./migrate-database.sh"
+                    containerName: "{{ app_name }}"
+                  failurePolicy: Retry
+            triggers:
+            - imageChangeParams:
+                automatic: true
+                containerNames:
+                - "{{ app_name }}"
+                from:
+                  kind: ImageStreamTag
+                  name: "{{ app_name }}:latest"
+              type: ImageChange
+            - type: ConfigChange
+            replicas: 3
+            selector:
+              name: "{{ app_name }}"
+            template:
+              metadata:
+                name: "{{ app_name }}"
+                labels:
+                  name: "{{ app_name }}"
+              spec:
+                containers:
+                - name: "{{ app_name }}"
+                  image: " "
+                  ports:
+                  - containerPort: 8080
+                  readinessProbe:
+                    httpGet:
+                      path: "/health.php"
+                      port: 8080
+                    initialDelaySeconds: 3
+                    timeoutSeconds: 3
+                  livenessProbe:
+                    httpGet:
+                      path: "/"
+                      port: 8080
+                    initialDelaySeconds: 30
+                    timeoutSeconds: 3
+                  env:
+                  - name: ROUTER_SHARD
+                    value: "44fs"
+                  - name: DB_CONNECTION
+                    value: "sqlite"
+                  - name: APP_KEY
+                    value: "{{ lookup('password', '/dev/null chars=ascii_letters,digits length=32') }}"
+                  - name: APP_ENV
+                    value: "{{ deployment_environment }}"
+                  - name: APP_DEBUG
+                    value: "{{ app_debug }}"
+                  - name: OPCACHE_REVALIDATE_FREQ
+                    value: "0"
+                  resources:
+                    limits:
+                      memory: "512Mi"
+
+        wait: yes
+      register: php_laravel_deployment
