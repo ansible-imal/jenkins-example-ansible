@@ -52,87 +52,87 @@ pipeline {
                 script {
                     openshift.withCluster() {
                         bcParam = [
-                      'kind': 'BuildConfig',
-                      'apiVersion': 'v1',
-                      'metadata': [
-                        'name': "${params.APP_NAME}",
-                        'annotations': [
-                          'description': 'Defines how to build the application',
-                          'template.alpha.openshift.io/wait-for-ready': 'true'
-                        ]
-                      ],
-                      'spec': [
-                        'source': [
-                          'contextDir': "${params.CONTEXT_DIR}",
-                          'type': 'Git',
-                          'git': [
-                            'uri': "${params.SOURCE_REPOSITORY_URL}",
-                            'ref': "${params.SOURCE_REPOSITORY_REF}"
-                          ]
-                        ],
-                        'strategy': [
-                          'type': 'Source',
-                          'sourceStrategy': [
-                            'from': [
-                              'kind': 'ImageStreamTag',
-                              'namespace': 'openshift',
-                              'name': "php:${params.PHP_VERSION}"
+                            'kind': 'BuildConfig',
+                            'apiVersion': 'v1',
+                            'metadata': [
+                                'name': "${params.APP_NAME}",
+                                'annotations': [
+                                'description': 'Defines how to build the application',
+                                'template.alpha.openshift.io/wait-for-ready': 'true'
+                                ]
                             ],
-                            'env': [
-                              [
-                                'name': 'COMPOSER_MIRROR',
-                                'value': "${params.COMPOSER_MIRROR}"
-                              ]
+                            'spec': [
+                                'source': [
+                                'contextDir': "${params.CONTEXT_DIR}",
+                                'type': 'Git',
+                                'git': [
+                                    'uri': "${params.SOURCE_REPOSITORY_URL}",
+                                    'ref': "${params.SOURCE_REPOSITORY_REF}"
+                                ]
+                                ],
+                                'strategy': [
+                                'type': 'Source',
+                                'sourceStrategy': [
+                                    'from': [
+                                    'kind': 'ImageStreamTag',
+                                    'namespace': 'openshift',
+                                    'name': "php:${params.PHP_VERSION}"
+                                    ],
+                                    'env': [
+                                    [
+                                        'name': 'COMPOSER_MIRROR',
+                                        'value': "${params.COMPOSER_MIRROR}"
+                                    ]
+                                    ]
+                                ]
+                                ],
+                                'output': [
+                                'to': [
+                                    'kind': 'ImageStreamTag',
+                                    'name': "${params.APP_NAME}:latest"
+                                ]
+                                ],
+                                'triggers': [
+                                [
+                                    'type': 'ImageChange'
+                                ],
+                                [
+                                    'type': 'ConfigChange'
+                                ],
+                                [
+                                    'github': [
+                                    'secret': 'qazxs10298qazxs10298qazxs10298qazxs10298'
+                                    ],
+                                    'type': 'GitHub'
+                                ]
+                                ]
                             ]
-                          ]
-                        ],
-                        'output': [
-                          'to': [
-                            'kind': 'ImageStreamTag',
-                            'name': "${params.APP_NAME}:latest"
-                          ]
-                        ],
-                        'triggers': [
-                          [
-                            'type': 'ImageChange'
-                          ],
-                          [
-                            'type': 'ConfigChange'
-                          ],
-                          [
-                            'github': [
-                              'secret': 'qazxs10298qazxs10298qazxs10298qazxs10298'
-                            ],
-                            'type': 'GitHub'
-                          ]
-                        ]
-                      ]
 
-                    ]
+                        ]
                         bc = null
                         builds = null
-                        try {
+                        needBuild = true
+                        try {                            
                             bc = openshift.selector( "bc/${params.APP_NAME}" )
+                            builds = bc.related('builds')                            
                             if (!bc.exists()) {
                                 println('BC not exists')
                                 bc = openshift.create( bcParam, '--save-config', '--validate' )
                                 bc.describe()
                                 builds = bc.related('builds')
+                                needBuild = false
                                 timeout(10) {
                                     builds.logs('-f')
                                 }
                             }
-
-                    // dc = bcC.narrow('bc')
-                    }catch (Exception ex) {
+                        } catch (Exception ex) {
                             println('Error')
-                            println(ex.getMessage())
+                            println(message)
                             currentBuild.result = 'ABORTED'
                             error('Build Failed')
                         }
                         try {
-                            builds = bc.related('builds')
-                            if ( builds.count() < 1 ) {
+                            if ( needBuild || builds.count() < 1 ) {
                                 // Start Build
                                 result = null
                                 result = bc.startBuild()
@@ -140,28 +140,13 @@ pipeline {
                                     result.logs('-f')
                                 }
                             }
-                    }catch (Exception ex) {
+                        }catch (Exception ex) {
                             println('Already Built, keep continue')
-                            println(ex.getMessage())
+                            println(message)
                         // currentBuild.result = 'ABORTED'
                         // error('Build Failed')
                         }
 
-                    // try{
-                    //     result = bc.startBuild()
-                    //     timeout(10) {
-                    //         result.logs('-f')
-                    //     }
-                    // }catch (Exception ex) {
-                    //     println("can not start build")
-                    //     println(ex.getMessage())
-                    //     currentBuild.result = 'ABORTED'
-                    //     error('Build Failed')
-
-                    // }
-
-                    // create will marshal the model into JSON and send it to the API server.
-                    // We will add some passthrough arguments (--save-config and --validate)
                     }
                 }
             }
