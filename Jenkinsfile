@@ -1,3 +1,7 @@
+import org.jenkinsci.plugins.configfiles.GlobalConfigFiles
+import org.jenkinsci.lib.configprovider.model.Config
+
+Freestring = 'Satu'
 pipeline {
     agent any
     triggers {
@@ -13,141 +17,173 @@ pipeline {
                 ], poll: true
             }
         }
-        stage('Add Image Stream'){
+        stage('Add Image Stream') {
             steps {
                 script {
                     openshift.withCluster() {
-                        def secret = [
-                            "kind": "ImageStream",
-                            "apiVersion": "v1",
-                            "metadata": [
-                                "name": "${params.APP_NAME}",
-                                "annotations":[
-                                    "description": "Keeps track of changes in the application image"
-                                ]
+                        secret = [
+                        'kind': 'ImageStream',
+                        'apiVersion': 'v1',
+                        'metadata': [
+                            'name': "${params.APP_NAME}",
+                            'annotations':[
+                                'description': 'Keeps track of changes in the application image'
                             ]
                         ]
-                        try{
-                            def imgStream = openshift.selector( "is/${params.APP_NAME}" )
-                            println('IS exists')
-                        }catch (Exception ex) {
-                            println('IS not exists')
+                    ]
+                        try {
+                            is = openshift.selector( "is/${params.APP_NAME}" )
+                            if (!is.exists()) {
+                                println('IS not exists, creating new IS')
+                                is = openshift.create( secret, '--save-config', '--validate' )
+                                is.describe()
+                                println('IS exists')
+                            }
+                    }catch (Exception ex) {
+                            println('IS not exists, cant create')
                             println(ex.getMessage())
-                            imgStream = openshift.create( secret, '--save-config', '--validate' )
                         }
                     }
                 }
             }
         }
-        stage('Build Image'){
+        stage('Add Build Config') {
             steps {
                 script {
                     openshift.withCluster() {
-                        def bcParam = [
-                        "kind": "BuildConfig",
-                        "apiVersion": "v1",
-                        "metadata": [
-                            "name": "${params.APP_NAME}",
-                            "annotations": [
-                            "description": "Defines how to build the application",
-                            "template.alpha.openshift.io/wait-for-ready": "true"
-                            ]
+                        bcParam = [
+                      'kind': 'BuildConfig',
+                      'apiVersion': 'v1',
+                      'metadata': [
+                        'name': "${params.APP_NAME}",
+                        'annotations': [
+                          'description': 'Defines how to build the application',
+                          'template.alpha.openshift.io/wait-for-ready': 'true'
+                        ]
+                      ],
+                      'spec': [
+                        'source': [
+                          'contextDir': "${params.CONTEXT_DIR}",
+                          'type': 'Git',
+                          'git': [
+                            'uri': "${params.SOURCE_REPOSITORY_URL}",
+                            'ref': "${params.SOURCE_REPOSITORY_REF}"
+                          ]
                         ],
-                        "spec": [
-                            "source": [
-                            "contextDir": "${params.CONTEXT_DIR}",
-                            "type": "Git",
-                            "git": [
-                                "uri": "${params.SOURCE_REPOSITORY_URL}",
-                                "ref": "${params.SOURCE_REPOSITORY_REF}"
-                            ]
+                        'strategy': [
+                          'type': 'Source',
+                          'sourceStrategy': [
+                            'from': [
+                              'kind': 'ImageStreamTag',
+                              'namespace': 'openshift',
+                              'name': "php:${params.PHP_VERSION}"
                             ],
-                            "strategy": [
-                            "type": "Source",
-                            "sourceStrategy": [
-                                "from": [
-                                "kind": "ImageStreamTag",
-                                "namespace": "openshift",
-                                "name": "php:${params.PHP_VERSION}"
-                                ],
-                                "env": [
-                                [
-                                    "name": "COMPOSER_MIRROR",
-                                    "value": "${params.COMPOSER_MIRROR}"
-                                ]
-                                ]
+                            'env': [
+                              [
+                                'name': 'COMPOSER_MIRROR',
+                                'value': "${params.COMPOSER_MIRROR}"
+                              ]
                             ]
+                          ]
+                        ],
+                        'output': [
+                          'to': [
+                            'kind': 'ImageStreamTag',
+                            'name': "${params.APP_NAME}:latest"
+                          ]
+                        ],
+                        'triggers': [
+                          [
+                            'type': 'ImageChange'
+                          ],
+                          [
+                            'type': 'ConfigChange'
+                          ],
+                          [
+                            'github': [
+                              'secret': 'qazxs10298qazxs10298qazxs10298qazxs10298'
                             ],
-                            "output": [
-                            "to": [
-                                "kind": "ImageStreamTag",
-                                "name": "${params.APP_NAME}:latest"
-                            ]
-                            ],
-                            "triggers": [
-                            [
-                                "type": "ImageChange"
-                            ],
-                            [
-                                "type": "ConfigChange"
-                            ],
-                            [
-                                "github": [
-                                "secret": "{{ lookup('password', '/tmp/passwordfile length=40 chars=digits') }}"
-                                ],
-                                "type": "GitHub"
-                            ]
-                            ]
+                            'type': 'GitHub'
+                          ]
                         ]
+                      ]
 
-                        ]
-                        def bc = null
-                        try{
+                    ]
+                        bc = null
+                        builds = null
+                        try {
                             bc = openshift.selector( "bc/${params.APP_NAME}" )
-                            println('BC exists')
-                            
-                        }catch (Exception ex) {
-                            println('BC not exists')
-                            println(ex.getMessage())
-                            bc = openshift.create( bcParam, '--save-config', '--validate' )
-                        }
-                        // try{
-                        //     def result = bc.startBuild()
-                        //     timeout(10) {
-                        //         result.logs('-f')
-                        //     }
-                        // }catch (Exception ex) {
-                        //     println("can not start build")
-                        //     println(ex.getMessage())
-                        // }
-                        
+                            if (!bc.exists()) {
+                                println('BC not exists')
+                                bc = openshift.create( bcParam, '--save-config', '--validate' )
+                                bc.describe()
+                                builds = bc.related('builds')
+                                timeout(10) {
+                                    builds.logs('-f')
+                                }
+                            }
 
-                
-                        // create will marshal the model into JSON and send it to the API server.
-                        // We will add some passthrough arguments (--save-config and --validate)
+                    // dc = bcC.narrow('bc')
+                    }catch (Exception ex) {
+                            println('Error')
+                            println(ex.getMessage())
+                            currentBuild.result = 'ABORTED'
+                            error('Build Failed')
+                        }
+                        try {
+                            builds = bc.related('builds')
+                            if ( builds.count() < 1 ) {
+                                // Start Build
+                                result = null
+                                result = bc.startBuild()
+                                timeout(10) {
+                                    result.logs('-f')
+                                }
+                            }
+                    }catch (Exception ex) {
+                            println('Already Built, keep continue')
+                            println(ex.getMessage())
+                        // currentBuild.result = 'ABORTED'
+                        // error('Build Failed')
+                        }
+
+                    // try{
+                    //     result = bc.startBuild()
+                    //     timeout(10) {
+                    //         result.logs('-f')
+                    //     }
+                    // }catch (Exception ex) {
+                    //     println("can not start build")
+                    //     println(ex.getMessage())
+                    //     currentBuild.result = 'ABORTED'
+                    //     error('Build Failed')
+
+                    // }
+
+                    // create will marshal the model into JSON and send it to the API server.
+                    // We will add some passthrough arguments (--save-config and --validate)
                     }
                 }
-            }   
+            }
         }
-        stage('Deploy With Ansible') {
+        stage('Execute') {
             steps {
                 script {
                     tower_job = ansibleTower(
                         async: false,
-                        jobTemplate: 'DC From Jenkins',
-                        templateType: 'job',
+                        jobTemplate: "${params.ANSIBLE_WORKFLOW}",
+                        templateType: 'workflow',
                         towerServer: 'ansible_openshift',
                         extraVars: '''---
         app_name: "'''+"${params.APP_NAME}"+'''"
-        deployment_environment: "'''+"${params.DEPLOYMENT_ENVIRONMENT}"+'''"
+        namespace: "'''+"${params.NAMESPACE}"+'''"
+        deployment_environment: "'''+"${params.SOURCE_REPOSITORY_REF}"+'''"
         app_debug: false
         namespace: "'''+"${params.NAMESPACE}"+'''"''',
                     )
-                    println("Tower job "+ tower_job.get("JOB_ID") +" was submitted. Job URL is: "+ tower_job.get("JOB_URL"))        
-                } 
+                }
             }
         }
     }
+
 }
-
-
