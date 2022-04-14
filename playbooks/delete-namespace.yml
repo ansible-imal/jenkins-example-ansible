@@ -56,3 +56,13 @@
           kind: DeploymentConfig
           metadata:
             name: "{{ app_name }}"
+    
+    - name: Delete an ImageStream
+      k8s:
+        state: absent
+        namespace: "{{ namespace }}"        
+        definition:
+          apiVersion: v1
+          kind: ImageStream
+          metadata:
+            name: "{{ app_name }}"
