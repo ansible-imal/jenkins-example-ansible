@@ -1,0 +1,58 @@
+---
+- name: Deployment Config 
+  hosts: localhost
+  connection: local
+  collections:
+    - community.kubernetes
+
+  vars:
+    namespace: "namespace-new"
+    app_name: "appname"
+
+  tasks:
+    - name: Create a k8s namespace
+      k8s:
+        name: "{{ namespace }}"
+        api_version: v1
+        kind: Namespace
+        state: absent    
+  
+    - name: Delete a Service
+      k8s:
+        state: absent
+        namespace: "{{ namespace }}"        
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: "{{ app_name }}"
+        
+    - name: Delete a Router
+      k8s:
+        state: absent
+        namespace: "{{ namespace }}"        
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: "{{ app_name }}"
+
+    - name: Delete a Build Config
+      k8s:
+        state: absent
+        namespace: "{{ namespace }}"        
+        definition:
+          apiVersion: v1
+          kind: BuildConfig
+          metadata:
+            name: "{{ app_name }}"
+
+    - name: Delete a Deployment Config
+      k8s:
+        state: absent
+        namespace: "{{ namespace }}"        
+        definition:
+          apiVersion: v1
+          kind: DeploymentConfig
+          metadata:
+            name: "{{ app_name }}"

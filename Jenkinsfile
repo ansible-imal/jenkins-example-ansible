@@ -1,7 +1,6 @@
 import org.jenkinsci.plugins.configfiles.GlobalConfigFiles
 import org.jenkinsci.lib.configprovider.model.Config
 
-Freestring = 'Satu'
 pipeline {
     agent any
     triggers {
@@ -161,7 +160,6 @@ pipeline {
                         towerServer: 'ansible_openshift',
                         extraVars: '''---
         app_name: "'''+"${params.APP_NAME}"+'''"
-        namespace: "'''+"${params.NAMESPACE}"+'''"
         deployment_environment: "'''+"${params.SOURCE_REPOSITORY_REF}"+'''"
         app_debug: false
         namespace: "'''+"${params.NAMESPACE}"+'''"''',
