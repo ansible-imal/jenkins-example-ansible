@@ -150,7 +150,7 @@ pipeline {
                 }
             }
         }
-        stage('Execute') {
+        stage('Deploy with Ansible AP') {
             steps {
                 script {
                     tower_job = ansibleTower(
